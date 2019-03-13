@@ -57,25 +57,20 @@ func retryCreateDashboard(logger *zap.Logger, client sls.ClientInterface, projec
 
 func retryCreateIndex(logger *zap.Logger, client sls.ClientInterface, project, logstore, indexStr string) (err error) {
 	// create index, create index do not return error
-	createFlag := true
 	for i := 0; i < 10; i++ {
-		if createFlag {
-			err = client.CreateIndexString(project, logstore, indexStr)
-		} else {
-			err = client.UpdateIndexString(project, logstore, indexStr)
-		}
+		err = client.CreateIndexString(project, logstore, indexStr)
+
 		if err != nil {
 			// if IndexAlreadyExist, just return
 			if clientError, ok := err.(*sls.Error); ok && clientError.Code == "IndexAlreadyExist" {
 				logger.With(zap.String("project", project)).
 					With(zap.String("logstore", logstore)).
-					Info("index already exist, try update index")
-				createFlag = false
-				continue
+					Info("index already exist, skipped")
+				return nil
 			}
 			time.Sleep(time.Second)
 		} else {
-			logger.With(zap.String("project", project)).With(zap.String("logstore", logstore)).Info("create or update index success")
+			logger.With(zap.String("project", project)).With(zap.String("logstore", logstore)).Info("create index success")
 			break
 		}
 	}
